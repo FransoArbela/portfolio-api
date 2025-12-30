@@ -64,14 +64,14 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 app.post("/projects", async (req, res) => {
-	const { title, description, image_url, github_url, live_url, tags } =
+	const { title, description, imageUrl, githubUrl, liveUrl, tags } =
 		req.body;
 
 	if (!title) return res.status(400).json({ error: "title is required" });
 
 	const { data, error } = await supabase
 		.from("projects")
-		.insert([{ title, description, image_url, github_url, live_url, tags }])
+		.insert([{ title, description, imageUrl: imageUrl, githubUrl: githubUrl, liveUrl: liveUrl, tags }])
 		.select()
 		.single();
 
