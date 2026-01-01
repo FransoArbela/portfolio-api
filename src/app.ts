@@ -52,7 +52,7 @@ app.get("/projects", async (_req, res) => {
 		where: { isPublished: true },
 		orderBy: { sortOrder: "asc" },
 	});
-	res.json(`yes${_projects.length}`);
+	res.json({ projects: _projects, count: _projects.length });
 });
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
