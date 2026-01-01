@@ -44,7 +44,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 		secure: process.env.NODE_ENV === "production",
 	});
 
-	return res.json({ ok: true });
+	res.json({ ok: true });
 });
 
 export const me = asyncHandler(async (req: Request, res: Response) => {
@@ -60,10 +60,10 @@ export const me = asyncHandler(async (req: Request, res: Response) => {
 	}
 
 	jwt.verify(token, secret);
-	return res.json({ ok: true, role: "admin" });
+	res.json({ ok: true, role: "admin" });
 });
 
 export const logout = asyncHandler(async (_req: Request, res: Response) => {
 	res.clearCookie("token");
-	return res.json({ ok: true });
+	res.json({ ok: true });
 });
