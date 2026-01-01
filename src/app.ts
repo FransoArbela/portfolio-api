@@ -70,6 +70,9 @@ app.get("/projects", async (_req, res) => {
 		}
 
 		return res.json({ projects: data, count: data.length });
+	} catch (error) {
+		logger.error(error, "Unexpected error fetching projects");
+		return res.status(500).json({ error: "Unexpected error fetching projects" });
 	}
 });
 
