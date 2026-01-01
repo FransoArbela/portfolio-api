@@ -68,7 +68,7 @@ app.get(
 			throw new Error("Failed to fetch projects");
 		}
 
-		res.json(data);
+		res.json({ projects: data });
 	}),
 );
 
