@@ -1,25 +1,37 @@
 import bcrypt from "bcrypt";
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { UnauthorizedError, ValidationError } from "../errors/AppError";
+import { asyncHandler } from "../utils/asyncHandler";
 
-export async function login(req: Request, res: Response) {
+export const login = asyncHandler(async (req: Request, res: Response) => {
 	const { email, password } = req.body;
 
+	if (!email || !password) {
+		throw new ValidationError("Email and password are required");
+	}
+
 	if (email !== process.env.ADMIN_EMAIL) {
-		return res.status(401).json({ message: "Invalid credentials" });
+		throw new UnauthorizedError("Invalid credentials");
+	}
+
+	const adminPassword = process.env.ADMIN_PASSWORD;
+	if (!adminPassword) {
+		throw new Error("Server configuration error: ADMIN_PASSWORD not set");
 	}
 
 	const valid = await bcrypt.compare(
 		password,
-		await bcrypt.hash(process.env.ADMIN_PASSWORD || "", 10),
+		await bcrypt.hash(adminPassword, 10),
 	);
+
 	if (!valid) {
-		return res.status(401).json({ message: "Invalid credentials" });
+		throw new UnauthorizedError("Invalid credentials");
 	}
 
 	const jwtSecret = process.env.JWT_SECRET;
 	if (!jwtSecret) {
-		return res.status(500).json({ message: "Server configuration error" });
+		throw new Error("Server configuration error: JWT_SECRET not set");
 	}
 
 	const token = jwt.sign({ role: "admin" }, jwtSecret, {
@@ -29,28 +41,29 @@ export async function login(req: Request, res: Response) {
 	res.cookie("token", token, {
 		httpOnly: true,
 		sameSite: "lax",
-		secure: false,
+		secure: process.env.NODE_ENV === "production",
 	});
 
 	return res.json({ ok: true });
-}
+});
 
-export function me(req: Request, res: Response) {
+export const me = asyncHandler(async (req: Request, res: Response) => {
 	const token = req.cookies.token;
-	if (!token) return res.status(401).json({ ok: false });
+
+	if (!token) {
+		throw new UnauthorizedError();
+	}
 
 	const secret = process.env.JWT_SECRET;
-	if (!secret) return res.status(500).json({ ok: false });
-
-	try {
-		jwt.verify(token, secret);
-		return res.json({ ok: true, role: "admin" });
-	} catch {
-		return res.status(401).json({ ok: false });
+	if (!secret) {
+		throw new Error("Server configuration error: JWT_SECRET not set");
 	}
-}
 
-export function logout(_req: Request, res: Response) {
+	jwt.verify(token, secret);
+	return res.json({ ok: true, role: "admin" });
+});
+
+export const logout = asyncHandler(async (_req: Request, res: Response) => {
 	res.clearCookie("token");
 	return res.json({ ok: true });
-}
+});

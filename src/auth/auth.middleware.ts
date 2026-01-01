@@ -1,22 +1,23 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { UnauthorizedError } from "../errors/AppError";
 
-export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+export function requireAdmin(req: Request, _res: Response, next: NextFunction) {
 	const token = req.cookies.token;
 
 	if (!token) {
-		return res.status(401).json({ message: "Unauthorized" });
+		throw new UnauthorizedError();
 	}
 
 	const secret = process.env.JWT_SECRET;
 	if (!secret) {
-		return res.status(500).json({ message: "Server configuration error" });
+		throw new Error("Server configuration error: JWT_SECRET not set");
 	}
 
 	try {
 		jwt.verify(token, secret);
 		next();
-	} catch {
-		return res.status(401).json({ message: "Unauthorized" });
+	} catch (_error) {
+		throw new UnauthorizedError();
 	}
 }
