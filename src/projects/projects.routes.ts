@@ -10,11 +10,58 @@ const router = Router();
 router.get(
 	"/",
 	requireAdmin,
-	asyncHandler(async (_req, res) => {
+	asyncHandler(async (req, res) => {
+		// Parse query parameters for pagination and filtering
+		const page = Number.parseInt(req.query.page as string, 10) || 1;
+		const limit = Number.parseInt(req.query.limit as string, 10) || 10;
+		const skip = (page - 1) * limit;
+		const publishedOnly = req.query.published === "true";
+
+		// Build where clause
+		const where = publishedOnly ? { isPublished: true } : {};
+
+		// Get total count for pagination metadata
+		const totalCount = await prisma.project.count({ where });
+
+		// Fetch projects with pagination
 		const projects = await prisma.project.findMany({
+			where,
 			orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+			skip,
+			take: limit,
 		});
-		res.json(projects);
+
+		// Structure the response
+		res.json({
+			success: true,
+			data: projects.map((project) => ({
+				id: project.id,
+				title: project.title,
+				description: project.description,
+				technologies: project.tech,
+				images: {
+					thumbnail: project.imageUrl,
+				},
+				links: {
+					live: project.liveUrl,
+					github: project.githubUrl,
+				},
+				metadata: {
+					isPublished: project.isPublished,
+					sortOrder: project.sortOrder,
+					createdAt: project.createdAt,
+					updatedAt: project.updatedAt,
+				},
+			})),
+			pagination: {
+				currentPage: page,
+				totalPages: Math.ceil(totalCount / limit),
+				totalCount,
+				perPage: limit,
+				hasNextPage: page < Math.ceil(totalCount / limit),
+				hasPreviousPage: page > 1,
+			},
+		});
 	}),
 );
 

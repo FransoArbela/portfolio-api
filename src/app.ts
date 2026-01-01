@@ -57,18 +57,64 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 /* public */
 app.get(
 	"/projects",
-	asyncHandler(async (_req, res) => {
+	asyncHandler(async (req, res) => {
+		// Parse query parameters for pagination
+		const page = Number.parseInt(req.query.page as string, 10) || 1;
+		const limit = Number.parseInt(req.query.limit as string, 10) || 10;
+		const offset = (page - 1) * limit;
+
+		// Get total count for pagination
+		const { count, error: countError } = await supabase
+			.from("projects")
+			.select("*", { count: "exact", head: true });
+
+		if (countError) {
+			logger.error(countError, "Error counting projects from Supabase");
+			throw new Error("Failed to count projects");
+		}
+
+		// Fetch projects with pagination
 		const { data, error } = await supabase
 			.from("projects")
 			.select("*")
-			.order("created_at", { ascending: false });
+			.order("created_at", { ascending: false })
+			.range(offset, offset + limit - 1);
 
 		if (error) {
 			logger.error(error, "Error fetching projects from Supabase");
 			throw new Error("Failed to fetch projects");
 		}
 
-		res.json({ projects: data });
+		const totalCount = count || 0;
+
+		// Structure the response
+		res.json({
+			success: true,
+			data: data.map((project) => ({
+				id: project.id,
+				title: project.title,
+				description: project.description,
+				technologies: project.tags || [],
+				images: {
+					thumbnail: project.image_url,
+				},
+				links: {
+					live: project.live_url,
+					github: project.github_url,
+				},
+				metadata: {
+					createdAt: project.created_at,
+				},
+			})),
+			pagination: {
+				currentPage: page,
+				totalPages: Math.ceil(totalCount / limit),
+				totalCount,
+				perPage: limit,
+				hasNextPage: page < Math.ceil(totalCount / limit),
+				hasPreviousPage: page > 1,
+			},
+		});
 	}),
 );
 
