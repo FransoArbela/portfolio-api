@@ -6,7 +6,6 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import pinoHttp from "pino-http";
 import authRoutes from "./auth/auth.routes";
-import { prisma } from "./db";
 import { logger } from "./logger";
 import adminProjectsRoutes from "./projects/projects.routes";
 
@@ -19,7 +18,7 @@ app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
 
-/* ✅ CORS MUST BE HERE */
+/* CORS*/
 app.use(
 	cors({
 		origin: "http://localhost:5173",
@@ -27,9 +26,7 @@ app.use(
 	}),
 );
 
-// app.options("/*", cors());
 
-/* rate limiting */
 app.use(
 	rateLimit({
 		windowMs: 15 * 60 * 1000,
@@ -46,14 +43,8 @@ app.get("/health", (_req, res) => {
 	res.json({ ok: true });
 });
 
-/* public */
-app.get("/projects", async (_req, res) => {
-	const _projects = await prisma.project.findMany({
-		where: { isPublished: true },
-		orderBy: { sortOrder: "asc" },
-	});
-	res.json({ projects: _projects, count: _projects.length });
-});
+
+
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -62,6 +53,26 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
 }
 
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+
+/* public */
+app.get("/projects", async (_req, res) => {
+	try {
+		const { data, error } = await supabase
+			.from("projects")
+			.select("*")
+			.order("sortOrder", { ascending: true })
+			.order("created_at", { ascending: false });
+
+		if (error) {
+			logger.error(error, "Error fetching projects from Supabase");
+			return res.status(500).json({ error: "Failed to fetch projects" });
+		}
+
+		return res.json({ projects: data, count: data.length });
+	}
+});
+
 
 app.post("/projects", async (req, res) => {
 	const { title, description, image_url, github_url, live_url, tags } =
