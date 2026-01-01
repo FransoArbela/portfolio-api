@@ -48,11 +48,11 @@ app.get("/health", (_req, res) => {
 
 /* public */
 app.get("/projects", async (_req, res) => {
-	const projects = await prisma.project.findMany({
+	const _projects = await prisma.project.findMany({
 		where: { isPublished: true },
 		orderBy: { sortOrder: "asc" },
 	});
-	res.json(projects);
+	res.json("yes");
 });
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
